@@ -8,11 +8,10 @@
 
 - **文件树** -- 展开/折叠文件夹，codicon 图标
 - **新建文件 / 新建文件夹 / 上传文件** -- 工具栏按钮和右键菜单
-- **拖拽上传** -- 侧边栏底部拖放区，逐文件显示进度条；也可拖放到树中任意文件夹。自动识别目标：选中文件夹、选中文件的父目录、或根目录
+- **拖拽上传** -- 侧边栏底部拖放区，逐文件显示进度条；也可拖放到树中任意文件夹
 - **内部拖拽** -- 拖动文件到文件夹或根目录进行移动
-- **内联创建与重命名** -- 新建时生成占位行并立即进入编辑；选中后按 F2 或右键重命名
-- **点击取消选中** -- 点击树之外的区域取消高亮
-- **文件预览** -- 图片、视频、音频、PDF、Markdown（渲染）、代码高亮、图表（Kroki）
+- **内联创建与重命名** -- 新建时生成占位行并立即进入编辑；F2 或右键重命名
+- **文件预览** -- 图片、视频、音频、PDF、HTML（直接渲染网页）、Markdown（含 LaTeX 数学公式）、代码高亮、图表（Kroki）
 - **实时同步** -- WebSocket 广播文件变更和在线用户数
 - **存储用量** -- 可视化进度条和数值显示
 
@@ -23,10 +22,10 @@
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-打开 http://localhost:8080。
+打开 http://localhost:8000。
 
 ### Docker
 
@@ -46,7 +45,7 @@ docker compose up --build
 | `MAX_TOTAL_SIZE_GB` | `10` | 总存储配额 (GB) |
 | `MAX_FILE_SIZE_MB` | `2048` | 单文件上传限制 (MB) |
 | `HOST` | `0.0.0.0` | 服务器绑定地址 |
-| `PORT` | `8080` | 服务器端口 |
+| `PORT` | `8000` | 服务器端口 |
 | `KROKI_URL` | `https://kroki.io` | Kroki 图表渲染服务地址 |
 
 ## API
@@ -94,19 +93,12 @@ docker compose up --build
 `docker-compose.yml` 已内置完整 Kroki 集群（含 Mermaid + BlockDiag 支持）。
 
 ```bash
-# 一键启动全部服务
-docker compose up -d
-
-# 查看状态
-docker compose ps
-
-# 停止
-docker compose down
+docker compose up -d   # 一键启动
+docker compose ps      # 查看状态
+docker compose down    # 停止
 ```
 
-Kroki 端口可通过 `KROKI_PORT` 环境变量配置（默认 `8001`）。
-
-如需在本地开发时连接 Docker 中的 Kroki：
+本地开发时连接 Docker 中的 Kroki：
 
 ```bash
 export KROKI_URL=http://localhost:8001
@@ -126,26 +118,79 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 file-share/
   app/
-    main.py              FastAPI 入口
-    ws.py                 WebSocket 管理器
+    main.py                    FastAPI 入口 + 后端初始化
+    ws.py                       WebSocket 管理器
+    models/                     数据契约（Pydantic）
+      file.py                   FileNode, StorageInfo
+      ws_message.py             WsMessage, WsMessageType
     routes/
-      files.py            CRUD 端点
-      preview.py          文件预览
+      files.py                  CRUD 端点
+      preview.py                文件预览 + 分类注册表
     services/
-      storage.py          路径解析、树构建、大小计算
+      storage_backend.py        存储后端 Protocol + get/set_backend
+      local_storage.py          本地文件系统后端实现
+      storage.py                门面层（委托给已注册后端）
     templates/
-      preview.html        预览模板
+      preview.html              预览模板（image/video/audio/pdf/html/md/code/diagram）
     static/
-      index.html          主布局
-      app.js              前端逻辑
-      style.css           VS Code 深色主题
-      codicon.css/.ttf    VS Code 图标字体
-  config.py               环境变量配置
+      index.html                主布局（VS Code 风格）
+      style.css                 深色主题
+      codicon.css/.ttf          VS Code 图标字体
+      js/                       前端模块（IIFE，按顺序加载）
+        state.js                共享状态 + DOM 引用
+        api.js                  fetch 封装 + 数据刷新
+        ws.js                   WebSocket 连接
+        tree.js                 目录树渲染 + 拖拽 + 右键菜单 + 行内重命名
+        upload.js               拖拽上传 + 进度条
+        preview.js              预览面板控制
+        main.js                 工具栏 + 键盘快捷键 + 初始化
+  config.py                     环境变量配置
   requirements.txt
   Dockerfile
   docker-compose.yml
-  data/                   文件存储 (gitignore)
+  data/                         文件存储 (gitignore)
 ```
+
+## 架构设计
+
+### 数据模型层 (`app/models/`)
+
+前后端统一的数据契约，所有 API 响应和 WebSocket 消息均有 Pydantic 类型约束。新增字段或消息类型时有补全提示，避免拼写错误。
+
+### 存储后端抽象 (`app/services/`)
+
+`StorageBackend` Protocol 定义存储接口，`LocalStorageBackend` 为本地文件系统实现。
+替换为 S3/MinIO 等远端存储只需实现 Protocol 并在 `main.py` 注册。
+
+```
+app/services/
+  storage_backend.py    ← Protocol + set_backend() / get_backend()
+  local_storage.py      ← 当前实现
+  storage.py            ← 门面层，路由和预览只依赖此层
+```
+
+### 前端模块化 (`app/static/js/`)
+
+500+ 行的 `app.js` 拆分为 7 个独立模块，按依赖顺序加载：
+
+```
+state.js → api.js → ws.js → tree.js → upload.js → preview.js → main.js
+```
+
+各模块通过共享 `FileShare` 全局状态对象和 DOM 引用（定义在 `state.js`）进行通信。
+
+### 预览注册表 (`app/routes/preview.py`)
+
+文件类型→预览类别的映射采用注册表模式，替代硬编码的 if/elif 链：
+
+```python
+register_preview(PreviewCategory(
+    name="html",
+    exts={".html", ".htm"},
+))
+```
+
+新增格式只需 `register_preview()` 一行，无需修改核心分类逻辑。
 
 ## 许可证
 
