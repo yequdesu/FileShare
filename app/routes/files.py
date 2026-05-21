@@ -4,8 +4,9 @@ import aiofiles
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from fastapi.responses import FileResponse
 from config import DATA_DIR, MAX_TOTAL_SIZE_GB, MAX_FILE_SIZE_MB
-from app.services.storage import get_abs_path, get_tree, get_total_size, format_size
+from app.services.storage import get_abs_path, get_tree, get_total_size, get_storage_info
 from app.ws import manager
+from app.models.ws_message import WsMessage, WsMessageType
 
 router = APIRouter()
 _upload_lock = asyncio.Lock()  # 串行化上传，防止 TOCTOU 配额绕过
@@ -18,15 +19,7 @@ async def list_tree():
 
 @router.get("/storage")
 async def storage_info():
-    used = get_total_size()
-    max_bytes = int(MAX_TOTAL_SIZE_GB * 1024**3)
-    return {
-        "used": used,
-        "used_human": format_size(used),
-        "max": max_bytes,
-        "max_human": format_size(max_bytes),
-        "percent": round(used / max_bytes * 100, 1) if max_bytes > 0 else 0,
-    }
+    return get_storage_info()
 
 
 @router.post("/upload")
@@ -59,13 +52,13 @@ async def upload(file: UploadFile = File(...), dir: str = Query("")):
             raise HTTPException(400, "empty file")
 
         rel = str(dest.relative_to(DATA_DIR))
-        await manager.broadcast({
-            "type": "file_added",
-            "path": rel,
-            "name": file.filename,
-            "is_dir": False,
-            "size": file_size,
-        })
+        await manager.broadcast(WsMessage(
+            type=WsMessageType.FILE_ADDED,
+            path=rel,
+            name=file.filename,
+            is_dir=False,
+            size=file_size,
+        ))
         return {"ok": True, "path": rel}
 
 
@@ -80,7 +73,7 @@ async def delete_item(path: str = Query(...)):
     else:
         abs_path.unlink()
 
-    await manager.broadcast({"type": "file_deleted", "path": path})
+    await manager.broadcast(WsMessage(type=WsMessageType.FILE_DELETED, path=path))
     return {"ok": True}
 
 
@@ -97,13 +90,13 @@ async def create_directory(path: str = Query(...)):
     abs_path = get_abs_path(path)
     abs_path.mkdir(parents=True, exist_ok=True)
     rel = str(abs_path.relative_to(DATA_DIR))
-    await manager.broadcast({
-        "type": "file_added",
-        "path": rel,
-        "name": abs_path.name,
-        "is_dir": True,
-        "size": 0,
-    })
+    await manager.broadcast(WsMessage(
+        type=WsMessageType.FILE_ADDED,
+        path=rel,
+        name=abs_path.name,
+        is_dir=True,
+        size=0,
+    ))
     return {"ok": True, "path": rel}
 
 
@@ -122,11 +115,7 @@ async def move_item(src: str = Query(...), dst: str = Query(...)):
     shutil.move(str(src_path), str(dst_path))
 
     dst_rel = str(dst_path.relative_to(DATA_DIR))
-    await manager.broadcast({
-        "type": "file_moved",
-        "src": src,
-        "dst": dst_rel,
-    })
+    await manager.broadcast(WsMessage(type=WsMessageType.FILE_MOVED, src=src, dst=dst_rel))
     return {"ok": True, "path": dst_rel}
 
 
@@ -145,9 +134,5 @@ async def rename_item(path: str = Query(...), name: str = Query(...)):
 
     abs_path.rename(new_path)
     dst_rel = str(new_path.relative_to(DATA_DIR))
-    await manager.broadcast({
-        "type": "file_renamed",
-        "src": path,
-        "dst": dst_rel,
-    })
+    await manager.broadcast(WsMessage(type=WsMessageType.FILE_RENAMED, src=path, dst=dst_rel))
     return {"ok": True, "path": dst_rel}

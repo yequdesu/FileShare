@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ filename }}</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
-{% if category == "markdown" %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-{% endif %}
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#1e1e1e;color:#d4d4d4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
@@ -35,8 +33,7 @@ pre code{display:block;padding:16px;font-size:13px;line-height:1.6;font-family:'
 .markdown-body ul,.markdown-body ol{padding-left:24px;margin-bottom:12px}
 .markdown-body blockquote{border-left:3px solid #007acc;padding-left:16px;color:#888;margin-bottom:12px}
 .markdown-body img{max-width:100%}
-.katex{color:#d4d4d4}
-.katex-display{overflow-x:auto;padding:4px 0}
+.MathJax{color:#d4d4d4}
 .diagram-wrap{position:relative;display:flex;align-items:center;justify-content:center;min-height:100vh;width:100%}
 .diagram-wrap pre{width:100%}
 .diagram-toggle{position:fixed;top:16px;right:16px;background:#007acc;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px;z-index:10}
@@ -94,23 +91,16 @@ function toggleDiagram(){
 {% elif category == "markdown" %}
 <div class="markdown-body" id="md-content"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$'],['\\[','\\]']],processEscapes:true},options:{ignoreHtmlClass:'tex2jax_ignore',processHtmlClass:'tex2jax_process'}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 <script>
 fetch('/api/raw?path={{ path }}').then(function(r){return r.text()}).then(function(t){
   var el=document.getElementById('md-content');
-  // join lines within $$...$$ blocks to prevent marked from inserting <br>
   t = t.replace(/\$\$[\s\S]*?\$\$/g, function(m){return m.replace(/\n/g,' ')});
   el.innerHTML=marked.parse(t);
-  renderMathInElement(el,{
-    delimiters:[
-      {left:'$$',right:'$$',display:true},
-      {left:'$',right:'$',display:false},
-      {left:'\\[',right:'\\]',display:true},
-      {left:'\\(',right:'\\)',display:false}
-    ],
-    throwOnError:false
-  });
+  MathJax.typesetPromise([el]).catch(function(err){console.error(err)});
 });
 </script>
 {% elif category == "html" %}
