@@ -238,25 +238,6 @@ sidebarScroll.addEventListener('drop', (e) => {
   doTreeDrop({ is_dir: true, path: '', name: '' }, src);
 });
 
-treeRoot.addEventListener('dragover', (e) => {
-  if (!dragSource) return;
-  // only trigger if hovering empty space (not a .tree-row)
-  if (e.target.closest('.tree-row') || e.target.closest('.tree-children')) return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  treeRoot.classList.add('drag-over-area');
-});
-treeRoot.addEventListener('dragleave', () => {
-  treeRoot.classList.remove('drag-over-area');
-});
-treeRoot.addEventListener('drop', (e) => {
-  treeRoot.classList.remove('drag-over-area');
-  if (!dragSource) return;
-  if (e.target.closest('.tree-row') || e.target.closest('.tree-children')) return;
-  e.preventDefault();
-  doTreeDrop({ is_dir: true, path: '', name: '' }, dragSource);
-});
-
 /* --- empty-area right-click context menu + select root on click --- */
 sidebarScroll.addEventListener('contextmenu', (e) => {
   if (e.target.closest('.tree-row')) return; // row handler handles it
