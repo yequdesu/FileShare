@@ -6,7 +6,11 @@ const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
 
 const treeRoot      = $('#tree-root');
 const sidebarScroll = $('#sidebar-scroll');
-const dropZone      = $('#drop-zone');
+const sidebarDrop   = $('#sidebar-drop-zone');
+const uploadProg    = $('#upload-progress');
+const progressFill  = $('#upload-progress-fill');
+const progressText  = $('#upload-progress-text');
+const sidebarDropIn = $('#sidebar-drop-inner');
 const fileInput     = $('#file-input');
 const previewFrame  = $('#preview-frame');
 const fileActions   = $('#file-actions');
@@ -258,7 +262,6 @@ function clearSelection() {
   sidebarScroll.classList.remove('root-selected');
   fileActions.style.display = 'none';
   previewFrame.style.display = 'none';
-  dropZone.style.display = '';
 }
 
 function selectRoot() {
@@ -308,30 +311,82 @@ function toggleFolder(row, item) {
 /*  Preview                                                            */
 /* ================================================================== */
 function showPreview(path) {
-  dropZone.style.display = 'none';
   previewFrame.style.display = '';
   previewFrame.src = '/api/preview?path=' + encodeURIComponent(path);
 }
 
 /* ================================================================== */
-/*  Upload                                                             */
+/*  Upload  (with progress)                                            */
 /* ================================================================== */
+function uploadTargetDir() {
+  if (!selected) return '';
+  if (selected.is_dir) return selected.path;
+  const parts = selected.path.split('/');
+  parts.pop();
+  return parts.join('/');
+}
+
+function uploadWithProgress(file, dir) {
+  return new Promise((resolve, reject) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/upload?dir=' + encodeURIComponent(dir || ''));
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        progressFill.style.width = pct + '%';
+        progressText.textContent = file.name + '  ' + pct + '%';
+      }
+    });
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(xhr.responseText || xhr.statusText));
+    });
+    xhr.addEventListener('error', () => reject(new Error('Network error')));
+    xhr.send(fd);
+  });
+}
+
 async function uploadFiles(files, dir) {
-  dir = dir || activeDir || '';
-  for (const f of files) {
-    const fd = new FormData(); fd.append('file', f);
-    try { await api('POST', '/api/upload?dir=' + encodeURIComponent(dir), fd); }
-    catch (err) { alert('Upload failed: ' + err.message); }
+  dir = dir || uploadTargetDir() || '';
+  sidebarDropIn.style.display = 'none';
+  uploadProg.style.display = '';
+  progressFill.style.width = '0%';
+  for (let i = 0; i < files.length; i++) {
+    progressText.textContent = files[i].name + '  (0%)';
+    try { await uploadWithProgress(files[i], dir); }
+    catch (err) { alert('Upload failed: ' + err.message); break; }
   }
+  uploadProg.style.display = 'none';
+  sidebarDropIn.style.display = '';
   await refreshTree();
   await refreshStorage();
 }
 
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); uploadFiles(e.dataTransfer.files); });
-dropZone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', () => { if (fileInput.files.length) { uploadFiles(fileInput.files); fileInput.value = ''; } });
+/* sidebar drop zone */
+sidebarDrop.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  sidebarDrop.classList.add('drag-over');
+});
+sidebarDrop.addEventListener('dragleave', (e) => {
+  e.stopPropagation();
+  sidebarDrop.classList.remove('drag-over');
+});
+sidebarDrop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  sidebarDrop.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) {
+    uploadFiles(e.dataTransfer.files);
+  }
+});
+sidebarDrop.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) { uploadFiles(fileInput.files); fileInput.value = ''; }
+});
 
 /* ================================================================== */
 /*  Delete / Download                                                  */
@@ -529,6 +584,7 @@ ctxMenu.addEventListener('click', async (e) => {
     switch (action) {
       case 'new-file':   insertGhostRow(activeDir, false); break;
       case 'new-folder': insertGhostRow(activeDir, true);  break;
+      case 'upload':     fileInput.click();                      break;
       case 'refresh':    await refreshTree(); await refreshStorage(); break;
     }
     return;
@@ -551,13 +607,27 @@ ctxMenu.addEventListener('click', async (e) => {
 });
 
 document.addEventListener('mousedown',   (e) => { if (!ctxMenu.contains(e.target)) hideContextMenu(); });
-document.addEventListener('contextmenu', (e) => { if (!ctxMenu.contains(e.target)) hideContextMenu(); });
+/* ================================================================== */
+/*  Deselect on click outside tree                                     */
+/* ================================================================== */
+document.addEventListener('click', (e) => {
+  if (!selected) return;
+  const t = e.target;
+  if (t.closest('.tree-row') || t.closest('#sidebar-header') ||
+      t.closest('#sidebar-drop-zone') || t.closest('#ctx-menu') ||
+      t.closest('#sidebar-scroll.root-selected')) return;
+  clearSelection();
+  selected = null;
+  activeDir = '';
+  breadcrumb.textContent = '';
+});
 
 /* ================================================================== */
 /*  Toolbar buttons                                                    */
 /* ================================================================== */
 $('#btn-new-file').addEventListener('click',   () => insertGhostRow(activeDir, false));
 $('#btn-new-folder').addEventListener('click', () => insertGhostRow(activeDir, true));
+$('#btn-upload').addEventListener('click',     () => fileInput.click());
 $('#btn-refresh').addEventListener('click',    async () => { await refreshTree(); await refreshStorage(); });
 $('#btn-download').addEventListener('click',   () => { if (selected && !selected.is_dir) downloadItem(selected.path); });
 $('#btn-delete').addEventListener('click',     () => { if (selected) deleteItem(selected.path); });

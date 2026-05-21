@@ -27,11 +27,22 @@
         <div id="sidebar-actions">
           <button id="btn-new-file" class="codicon codicon-new-file" title="New File"></button>
           <button id="btn-new-folder" class="codicon codicon-new-folder" title="New Folder"></button>
+          <button id="btn-upload" class="codicon codicon-cloud-upload" title="Upload File"></button>
           <button id="btn-refresh" class="codicon codicon-refresh" title="Refresh"></button>
         </div>
       </div>
       <div id="sidebar-scroll">
         <div id="tree-root"></div>
+      </div>
+      <div id="sidebar-drop-zone">
+        <div id="upload-progress" style="display:none">
+          <div id="upload-progress-bar"><div id="upload-progress-fill"></div></div>
+          <span id="upload-progress-text"></span>
+        </div>
+        <div id="sidebar-drop-inner">
+          <span class="codicon codicon-cloud-upload"></span>
+          <span>Drop files to upload</span>
+        </div>
       </div>
     </aside>
 
@@ -44,12 +55,6 @@
         </div>
       </div>
       <div id="main-content">
-        <div id="drop-zone">
-          <div class="drop-inner">
-            <p class="drop-title">Drop files here to upload</p>
-            <p class="drop-hint">or click to browse</p>
-          </div>
-        </div>
         <iframe id="preview-frame" style="display:none"></iframe>
       </div>
       <input type="file" id="file-input" multiple hidden>
@@ -62,6 +67,7 @@
   <!-- empty area items -->
   <div class="ctx-item" data-action="new-file" data-for-empty><span class="codicon codicon-new-file ctx-icon"></span>New File</div>
   <div class="ctx-item" data-action="new-folder" data-for-empty><span class="codicon codicon-new-folder ctx-icon"></span>New Folder</div>
+  <div class="ctx-item" data-action="upload" data-for-empty><span class="codicon codicon-cloud-upload ctx-icon"></span>Upload File</div>
   <div class="ctx-item" data-action="refresh" data-for-empty><span class="codicon codicon-refresh ctx-icon"></span>Refresh</div>
   <!-- item items -->
   <div class="ctx-sep"></div>

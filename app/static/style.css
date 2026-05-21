@@ -179,6 +179,58 @@ input { font-size: inherit; font-family: inherit }
 .drop-title { font-size: 15px; color: #888; margin-bottom: 6px }
 .drop-hint { font-size: 12px; color: #666 }
 
+/* --- sidebar drop zone --- */
+#sidebar-drop-zone {
+  border-top: 1px solid #3c3c3c;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #888;
+  cursor: pointer;
+  transition: background .15s;
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+#sidebar-drop-zone.drag-over {
+  background: #1a3a5c;
+  color: #ccc;
+}
+#sidebar-drop-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#sidebar-drop-inner .codicon {
+  font-size: 14px;
+}
+
+/* --- upload progress --- */
+#upload-progress {
+  margin-bottom: 6px;
+}
+#upload-progress-bar {
+  width: 100%;
+  height: 3px;
+  background: #4a4a4a;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 3px;
+}
+#upload-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #007acc;
+  border-radius: 2px;
+  transition: width .15s;
+}
+#upload-progress-text {
+  font-size: 10px;
+  color: #888;
+  display: block;
+  text-align: center;
+}
+
 /* --- preview iframe --- */
 #preview-frame {
   position: absolute; inset: 0;
