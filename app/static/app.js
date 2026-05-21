@@ -362,8 +362,9 @@ async function createDir(parent, name) {
 }
 
 async function createEmptyFile(parent, name) {
-  await api('POST', '/api/upload?dir=' + encodeURIComponent(parent || ''),
-    new File([new Blob([''], { type: 'text/plain' })], name));
+  const fd = new FormData();
+  fd.append('file', new File([new Blob([''], { type: 'text/plain' })], name));
+  await api('POST', '/api/upload?dir=' + encodeURIComponent(parent || ''), fd);
   await refreshTree();
   await refreshStorage();
 }
@@ -405,7 +406,7 @@ function startInlineRename(row, opts) {
     nameSpan.textContent = newName || oldName;
 
     if (isNew) {
-      if (!newName) { row.remove(); return; }
+      if (!newName || newName === 'New File' || newName === 'New Folder') { row.remove(); return; }
       try {
         if (isDir) await createDir(parentPath, newName);
         else       await createEmptyFile(parentPath, newName);
