@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from pathlib import Path
 import mimetypes
 import asyncio
@@ -12,27 +13,59 @@ from config import KROKI_URL
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
-MIME_CATEGORIES = {
-    "image": {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "image/bmp"},
-    "video": {"video/mp4", "video/webm", "video/ogg", "video/quicktime"},
-    "audio": {"audio/mpeg", "audio/wav", "audio/ogg", "audio/flac", "audio/aac", "audio/webm"},
-    "pdf": {"application/pdf"},
-}
+# ------------------------------------------------------------------ #
+#  Preview category registry                                          #
+# ------------------------------------------------------------------ #
 
-SOURCE_EXTS = {
+@dataclass
+class PreviewCategory:
+    """A registered preview category matching files by MIME type or extension."""
+    name: str
+    mimes: set[str] = field(default_factory=set)
+    exts: set[str] = field(default_factory=set)
+    fallback_text: bool = False  # catch-all for text/* MIME
+    priority: int = 10  # lower = checked first
+
+
+_preview_categories: list[PreviewCategory] = []
+
+
+def register_preview(category: PreviewCategory) -> None:
+    """Register a preview category. Earlier registrations checked first."""
+    _preview_categories.append(category)
+
+
+# Register built-in categories in priority order
+register_preview(PreviewCategory(name="image", mimes={
+    "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "image/bmp",
+}))
+register_preview(PreviewCategory(name="video", mimes={
+    "video/mp4", "video/webm", "video/ogg", "video/quicktime",
+}))
+register_preview(PreviewCategory(name="audio", mimes={
+    "audio/mpeg", "audio/wav", "audio/ogg", "audio/flac", "audio/aac", "audio/webm",
+}))
+register_preview(PreviewCategory(name="pdf", mimes={"application/pdf"}))
+register_preview(PreviewCategory(name="diagram", exts={
+    ".puml", ".pu", ".plantuml", ".mmd", ".mermaid",
+    ".dot", ".gv", ".d2", ".erd", ".excalidraw",
+    ".blockdiag", ".seqdiag", ".actdiag", ".nwdiag",
+    ".c4plantuml", ".svgbob", ".vega", ".vegalite", ".wavedrom",
+}))
+register_preview(PreviewCategory(name="markdown", exts={".md", ".markdown"}))
+register_preview(PreviewCategory(name="html", exts={".html", ".htm"}))
+register_preview(PreviewCategory(name="code", exts={
     ".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".java", ".c", ".cpp",
     ".h", ".hpp", ".css", ".scss", ".less", ".xml", ".json",
     ".yaml", ".yml", ".toml", ".ini", ".cfg", ".sh", ".bash", ".sql", ".rb",
     ".php", ".swift", ".kt", ".scala", ".lua", ".r", ".pl", ".dart", ".vue",
     ".svelte", ".txt", ".log", ".env", ".gitignore", ".makefile",
-}
+}))
+register_preview(PreviewCategory(name="text", fallback_text=True, priority=50))
 
-HTML_EXTS = {".html", ".htm"}
-
-MARKDOWN_EXTS = {".md", ".markdown"}
 
 # Kroki diagram extensions -> diagram type
-DIAGRAM_EXTS = {
+DIAGRAM_MAP = {
     ".puml": "plantuml",
     ".pu": "plantuml",
     ".plantuml": "plantuml",
@@ -56,21 +89,18 @@ DIAGRAM_EXTS = {
 
 
 def classify(mime: str, filename: str) -> str:
-    for cat, mimes in MIME_CATEGORIES.items():
-        if mime in mimes:
-            return cat
+    """Determine the preview category for a file using the registry."""
     ext = filename.lower().rsplit(".", 1)
     ext = "." + ext[-1] if len(ext) > 1 else ""
-    if ext in DIAGRAM_EXTS:
-        return "diagram"
-    if ext in MARKDOWN_EXTS:
-        return "markdown"
-    if ext in HTML_EXTS:
-        return "html"
-    if ext in SOURCE_EXTS:
-        return "code"
-    if mime and mime.startswith("text/"):
-        return "text"
+
+    for cat in _preview_categories:
+        if cat.mimes and mime in cat.mimes:
+            return cat.name
+        if cat.exts and ext in cat.exts:
+            return cat.name
+        if cat.fallback_text and mime.startswith("text/"):
+            return cat.name
+
     return "other"
 
 
@@ -112,7 +142,7 @@ async def kroki_render(path: str = Query(...)):
 
     ext = abs_path.name.lower().rsplit(".", 1)
     ext = "." + ext[-1] if len(ext) > 1 else ""
-    diagram_type = DIAGRAM_EXTS.get(ext)
+    diagram_type = DIAGRAM_MAP.get(ext)
     if not diagram_type:
         raise HTTPException(400, f"unsupported diagram extension: {ext}")
 

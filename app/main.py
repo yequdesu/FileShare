@@ -4,6 +4,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from app.routes import files, preview
 from app.ws import router as ws_router
+from app.services.storage_backend import set_backend
+from app.services.local_storage import LocalStorageBackend
+
+# Initialize storage backend
+set_backend(LocalStorageBackend())
 
 app = FastAPI(title="FileShare", docs_url=None, redoc_url=None)
 
