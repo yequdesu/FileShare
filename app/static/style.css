@@ -73,29 +73,36 @@ input { font-size: inherit; font-family: inherit }
 /* --- tree --- */
 .tree-item {
   display: flex; align-items: center;
-  height: 26px; padding-left: 0;
+  height: 22px; padding-left: 0;
   cursor: pointer; white-space: nowrap;
+  user-select: none;
 }
 .tree-item:hover { background: #2a2d2e }
 .tree-item.active { background: #37373d }
-.tree-item.drop-target { background: #1a3a5c }
+.tree-item.drag-over { background: #1a3a5c; outline: 1px dashed #007acc; outline-offset: -1px }
+.tree-item.dragging { opacity: 0.4 }
 
 .tree-toggle {
-  width: 16px; height: 100%;
+  width: 16px; height: 16px;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   font-size: 10px; color: #888;
 }
+.tree-toggle.codicon {
+  font-size: 10px;
+}
 .tree-toggle.empty { visibility: hidden }
 
 .tree-icon {
-  width: 16px; height: 100%;
+  width: 16px; height: 16px;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; font-size: 11px;
+  flex-shrink: 0;
+  font-size: 14px;
+  color: #c5c5c5;
 }
-.tree-icon.folder     { color: #dcb67a }
-.tree-icon.file       { color: #888 }
-.tree-icon.folder.open{ color: #dcb67a }
+.tree-icon.folder-icon     { color: #dcb67a }
+.tree-icon.folder-icon.open { color: #dcb67a }
+.tree-icon.file-icon       { color: #888 }
 
 .tree-name {
   flex: 1; overflow: hidden; text-overflow: ellipsis;
@@ -155,7 +162,47 @@ input { font-size: inherit; font-family: inherit }
   border: none; background: #1e1e1e;
 }
 
-/* --- modal --- */
+/* --- context menu --- */
+#ctx-menu {
+  position: fixed;
+  background: #252526;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,.36);
+  font-size: 13px;
+}
+.ctx-item {
+  display: flex; align-items: center;
+  padding: 4px 16px;
+  cursor: pointer;
+  color: #cccccc;
+  height: 24px;
+}
+.ctx-item:hover { background: #094771; color: #fff }
+.ctx-icon {
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  margin-right: 6px;
+  font-size: 14px;
+  color: #888;
+  flex-shrink: 0;
+}
+.ctx-item:hover .ctx-icon { color: #fff }
+.ctx-shortcut {
+  margin-left: auto;
+  padding-left: 24px;
+  color: #888;
+  font-size: 12px;
+}
+.ctx-item:hover .ctx-shortcut { color: #ccc }
+.ctx-sep {
+  height: 1px;
+  background: #454545;
+  margin: 4px 16px;
+}
 #modal-mask {
   position: fixed; inset: 0;
   background: rgba(0,0,0,.5);
