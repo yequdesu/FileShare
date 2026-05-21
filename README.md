@@ -1,24 +1,24 @@
 # FileShare
 
-Self-hosted file sharing and management web app with a VS Code-style interface.
+自托管的文件共享与管理 Web 应用，VS Code 风格界面。
 
-Built with FastAPI (Python) and vanilla HTML / CSS / JavaScript.
+基于 FastAPI (Python) 和原生 HTML / CSS / JavaScript 构建。
 
-## Features
+## 功能
 
-- **File tree explorer** -- expand/collapse folders, codicon icons
-- **New File / New Folder / Upload** -- toolbar buttons and right-click context menu
-- **Drag-and-drop upload** -- sidebar bottom drop zone with per-file progress bar, or drop onto any folder in the tree. Auto-detects target: selected folder, parent of selected file, or root
-- **Internal drag-and-drop** -- reorganize files by dragging into folders or root
-- **Inline create and rename** -- placeholder row enters rename mode immediately; press F2 or select Rename to edit in-place (file extension preserved by default)
-- **Click-away deselect** -- clicking outside the tree clears selection highlight
-- **File preview** -- images, video, audio, PDF, Markdown (rendered), and syntax-highlighted code
-- **Real-time sync** -- WebSocket broadcasts file changes and online user count
-- **Storage meter** -- visual bar with numeric usage display
+- **文件树** -- 展开/折叠文件夹，codicon 图标
+- **新建文件 / 新建文件夹 / 上传文件** -- 工具栏按钮和右键菜单
+- **拖拽上传** -- 侧边栏底部拖放区，逐文件显示进度条；也可拖放到树中任意文件夹。自动识别目标：选中文件夹、选中文件的父目录、或根目录
+- **内部拖拽** -- 拖动文件到文件夹或根目录进行移动
+- **内联创建与重命名** -- 新建时生成占位行并立即进入编辑；选中后按 F2 或右键重命名
+- **点击取消选中** -- 点击树之外的区域取消高亮
+- **文件预览** -- 图片、视频、音频、PDF、Markdown（渲染）、代码高亮
+- **实时同步** -- WebSocket 广播文件变更和在线用户数
+- **存储用量** -- 可视化进度条和数值显示
 
-## Quick start
+## 快速开始
 
-### Local
+### 本地开发
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
@@ -26,7 +26,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-Open http://localhost:8080.
+打开 http://localhost:8080。
 
 ### Docker
 
@@ -34,70 +34,70 @@ Open http://localhost:8080.
 docker compose up --build
 ```
 
-Data persists in `./data`.
+数据持久化在 `./data`。
 
-## Configuration
+## 配置
 
-All via environment variables:
+全部通过环境变量：
 
-| Variable | Default | Description |
+| 变量 | 默认值 | 说明 |
 |----------|---------|-------------|
-| `DATA_DIR` | `./data` | File storage root |
-| `MAX_TOTAL_SIZE_GB` | `10` | Total storage quota |
-| `MAX_FILE_SIZE_MB` | `2048` | Per-file upload limit |
-| `HOST` | `0.0.0.0` | Server bind address |
-| `PORT` | `8080` | Server listen port |
+| `DATA_DIR` | `./data` | 文件存储根目录 |
+| `MAX_TOTAL_SIZE_GB` | `10` | 总存储配额 (GB) |
+| `MAX_FILE_SIZE_MB` | `2048` | 单文件上传限制 (MB) |
+| `HOST` | `0.0.0.0` | 服务器绑定地址 |
+| `PORT` | `8080` | 服务器端口 |
 
 ## API
 
-| Method | Endpoint | Description |
+| 方法 | 端点 | 说明 |
 |--------|----------|-------------|
-| `GET` | `/api/tree` | Recursive file tree |
-| `GET` | `/api/storage` | Storage usage stats |
-| `POST` | `/api/upload?dir=` | Upload file(s) |
-| `DELETE` | `/api/delete?path=` | Delete file or folder |
-| `GET` | `/api/download?path=` | Download file |
-| `POST` | `/api/mkdir?path=` | Create directory |
-| `POST` | `/api/move?src=&dst=` | Move / rename |
-| `POST` | `/api/rename?path=&name=` | Rename in-place |
-| `GET` | `/api/preview?path=` | HTML preview page |
-| `GET` | `/api/raw?path=` | Raw file bytes |
-| `WS` | `/ws` | Real-time events |
+| `GET` | `/api/tree` | 递归文件树 |
+| `GET` | `/api/storage` | 存储用量 |
+| `POST` | `/api/upload?dir=` | 上传文件 |
+| `DELETE` | `/api/delete?path=` | 删除文件或文件夹 |
+| `GET` | `/api/download?path=` | 下载文件 |
+| `POST` | `/api/mkdir?path=` | 创建文件夹 |
+| `POST` | `/api/move?src=&dst=` | 移动 / 重命名 |
+| `POST` | `/api/rename?path=&name=` | 原地重命名 |
+| `GET` | `/api/preview?path=` | 预览页面 |
+| `GET` | `/api/raw?path=` | 原始文件字节 |
+| `WS` | `/ws` | 实时事件推送 |
 
-## Keyboard shortcuts
+## 快捷键
 
-| Key | Action |
+| 按键 | 操作 |
 |-----|--------|
-| `Del` | Delete selected item |
-| `F2` | Inline rename |
-| `Ctrl+Shift+C` | Copy absolute path |
+| `Del` | 删除选中项 |
+| `F2` | 内联重命名 |
+| `Ctrl+Shift+C` | 复制绝对路径 |
 
-## Project structure
+## 项目结构
 
 ```
 file-share/
   app/
-    main.py              FastAPI entry point
-    ws.py                 WebSocket manager
+    main.py              FastAPI 入口
+    ws.py                 WebSocket 管理器
     routes/
-      files.py            CRUD endpoints
-      preview.py          File preview
+      files.py            CRUD 端点
+      preview.py          文件预览
     services/
-      storage.py          Path resolution, tree builder, size calc
+      storage.py          路径解析、树构建、大小计算
     templates/
-      preview.html        Preview template
+      preview.html        预览模板
     static/
-      index.html          Main layout
-      app.js              Frontend logic
-      style.css           VS Code dark theme
-      codicon.css/.ttf    VS Code icons
-  config.py               Env-based config
+      index.html          主布局
+      app.js              前端逻辑
+      style.css           VS Code 深色主题
+      codicon.css/.ttf    VS Code 图标字体
+  config.py               环境变量配置
   requirements.txt
   Dockerfile
   docker-compose.yml
-  data/                   File storage (gitignored)
+  data/                   文件存储 (gitignore)
 ```
 
-## License
+## 许可证
 
 MIT
