@@ -577,13 +577,18 @@ function showContextMenu(x, y, target) {
 
     if (target === null) {
       // Empty area: only show items with forEmpty
-      if (!forEmpty && forItem !== undefined) el.style.display = 'none';
+      if (!forEmpty) el.style.display = 'none';
       return;
     }
     // Item menu: hide empty-area items
-    if (forEmpty && forItem === undefined) { el.style.display = 'none'; return; }
+    if (forEmpty && !forItem) { el.style.display = 'none'; return; }
     if (onlyFile && target.is_dir) { el.style.display = 'none'; return; }
     if (onlyDir  && !target.is_dir) { el.style.display = 'none'; return; }
+  });
+
+  // Hide/show separators
+  $$('.ctx-sep', ctxMenu).forEach(sep => {
+    sep.style.display = (target === null) ? 'none' : '';
   });
 
   // Position
