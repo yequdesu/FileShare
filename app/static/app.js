@@ -333,7 +333,6 @@ dropZone.addEventListener('drop', (e) => {
 
 /* --- upload via click or button --- */
 dropZone.addEventListener('click', () => fileInput.click());
-$('#btn-upload')?.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) {
     uploadFiles(fileInput.files);
@@ -594,6 +593,9 @@ function connectWS() {
 
   ws.onclose = () => {
     setTimeout(connectWS, 2000);
+  };
+  ws.onerror = () => {
+    ws.close();
   };
 }
 
