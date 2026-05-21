@@ -21,11 +21,13 @@ MIME_CATEGORIES = {
 
 SOURCE_EXTS = {
     ".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".java", ".c", ".cpp",
-    ".h", ".hpp", ".css", ".scss", ".less", ".html", ".htm", ".xml", ".json",
+    ".h", ".hpp", ".css", ".scss", ".less", ".xml", ".json",
     ".yaml", ".yml", ".toml", ".ini", ".cfg", ".sh", ".bash", ".sql", ".rb",
     ".php", ".swift", ".kt", ".scala", ".lua", ".r", ".pl", ".dart", ".vue",
     ".svelte", ".txt", ".log", ".env", ".gitignore", ".makefile",
 }
+
+HTML_EXTS = {".html", ".htm"}
 
 MARKDOWN_EXTS = {".md", ".markdown"}
 
@@ -63,6 +65,8 @@ def classify(mime: str, filename: str) -> str:
         return "diagram"
     if ext in MARKDOWN_EXTS:
         return "markdown"
+    if ext in HTML_EXTS:
+        return "html"
     if ext in SOURCE_EXTS:
         return "code"
     if mime and mime.startswith("text/"):

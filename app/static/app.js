@@ -353,20 +353,31 @@ function uploadWithProgress(file, dir) {
   });
 }
 
+let _uploading = false;
+
 async function uploadFiles(files, dir) {
-  dir = dir || uploadTargetDir() || '';
-  sidebarDropIn.style.display = 'none';
-  uploadProg.style.display = '';
-  progressFill.style.width = '0%';
-  for (let i = 0; i < files.length; i++) {
-    progressText.textContent = files[i].name + '  (0%)';
-    try { await uploadWithProgress(files[i], dir); }
-    catch (err) { alert('Upload failed: ' + err.message); break; }
+  if (_uploading) {
+    alert('Upload in progress — please wait for current upload to finish.');
+    return;
   }
-  uploadProg.style.display = 'none';
-  sidebarDropIn.style.display = '';
-  await refreshTree();
-  await refreshStorage();
+  _uploading = true;
+  try {
+    dir = dir || uploadTargetDir() || '';
+    sidebarDropIn.style.display = 'none';
+    uploadProg.style.display = '';
+    progressFill.style.width = '0%';
+    for (let i = 0; i < files.length; i++) {
+      progressText.textContent = files[i].name + '  (0%)';
+      try { await uploadWithProgress(files[i], dir); }
+      catch (err) { alert('Upload failed: ' + err.message); break; }
+    }
+  } finally {
+    uploadProg.style.display = 'none';
+    sidebarDropIn.style.display = '';
+    await refreshTree();
+    await refreshStorage();
+    _uploading = false;
+  }
 }
 
 /* sidebar drop zone */
@@ -679,6 +690,13 @@ function connectWS() {
 /* ================================================================== */
 /*  Init                                                               */
 /* ================================================================== */
+window.addEventListener('beforeunload', (e) => {
+  if (_uploading) {
+    e.preventDefault();
+    e.returnValue = '';  // Chrome 需要
+  }
+});
+
 (async () => {
   await refreshTree();
   await refreshStorage();

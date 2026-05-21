@@ -1,4 +1,5 @@
 import shutil
+import asyncio
 import aiofiles
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -7,6 +8,7 @@ from app.services.storage import get_abs_path, get_tree, get_total_size, format_
 from app.ws import manager
 
 router = APIRouter()
+_upload_lock = asyncio.Lock()  # 串行化上传，防止 TOCTOU 配额绕过
 
 
 @router.get("/tree")
@@ -30,35 +32,41 @@ async def storage_info():
 @router.post("/upload")
 async def upload(file: UploadFile = File(...), dir: str = Query("")):
     max_bytes = int(MAX_TOTAL_SIZE_GB * 1024**3)
-    used = get_total_size()
 
-    if used >= max_bytes:
-        raise HTTPException(413, "storage limit reached")
+    async with _upload_lock:
+        used = get_total_size()
 
-    content = await file.read()
-    file_size = len(content)
+        if used >= max_bytes:
+            raise HTTPException(413, "storage limit reached")
 
-    if file_size > MAX_FILE_SIZE_MB * 1024 * 1024:
-        raise HTTPException(413, f"file exceeds {MAX_FILE_SIZE_MB:.0f} MB limit")
-    if used + file_size > max_bytes:
-        raise HTTPException(413, "upload would exceed storage limit")
+        # 流式读取 + 流式写入，避免大文件撑爆内存
+        CHUNK_SIZE = 1024 * 1024  # 1 MB
+        target_dir = get_abs_path(dir)
+        target_dir.mkdir(parents=True, exist_ok=True)
+        dest = target_dir / file.filename
 
-    target_dir = get_abs_path(dir)
-    target_dir.mkdir(parents=True, exist_ok=True)
-    dest = target_dir / file.filename
+        file_size = 0
+        async with aiofiles.open(dest, "wb") as f:
+            while chunk := await file.read(CHUNK_SIZE):
+                file_size += len(chunk)
+                if file_size > MAX_FILE_SIZE_MB * 1024 * 1024:
+                    raise HTTPException(413, f"file exceeds {MAX_FILE_SIZE_MB:.0f} MB limit")
+                if used + file_size > max_bytes:
+                    raise HTTPException(413, "upload would exceed storage limit")
+                await f.write(chunk)
 
-    async with aiofiles.open(dest, "wb") as f:
-        await f.write(content)
+        if file_size == 0:
+            raise HTTPException(400, "empty file")
 
-    rel = str(dest.relative_to(DATA_DIR))
-    await manager.broadcast({
-        "type": "file_added",
-        "path": rel,
-        "name": file.filename,
-        "is_dir": False,
-        "size": file_size,
-    })
-    return {"ok": True, "path": rel}
+        rel = str(dest.relative_to(DATA_DIR))
+        await manager.broadcast({
+            "type": "file_added",
+            "path": rel,
+            "name": file.filename,
+            "is_dir": False,
+            "size": file_size,
+        })
+        return {"ok": True, "path": rel}
 
 
 @router.delete("/delete")

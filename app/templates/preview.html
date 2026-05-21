@@ -113,6 +113,8 @@ fetch('/api/raw?path={{ path }}').then(function(r){return r.text()}).then(functi
   });
 });
 </script>
+{% elif category == "html" %}
+<iframe src="/api/raw?path={{ path }}" sandbox="allow-scripts allow-same-origin" style="width:100%;height:100vh;border:none;background:#fff"></iframe>
 {% elif category == "code" or category == "text" %}
 <pre><code id="hl-content"></code></pre>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
