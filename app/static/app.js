@@ -257,19 +257,18 @@ treeRoot.addEventListener('drop', (e) => {
   doTreeDrop({ is_dir: true, path: '', name: '' }, dragSource);
 });
 
-/* --- empty-area right-click context menu --- */
-treeRoot.addEventListener('contextmenu', (e) => {
-  const onRow = e.target.closest('.tree-row');
-  if (onRow) return; // let the row handler deal with it
+/* --- empty-area right-click context menu + select root on click --- */
+sidebarScroll.addEventListener('contextmenu', (e) => {
+  if (e.target.closest('.tree-row')) return; // row handler handles it
   e.preventDefault();
+  selectRoot();
   ctxTarget = null;
   showContextMenu(e.clientX, e.clientY, null);
 });
-sidebarScroll.addEventListener('contextmenu', (e) => {
-  if (e.target !== sidebarScroll) return;
-  e.preventDefault();
-  ctxTarget = null;
-  showContextMenu(e.clientX, e.clientY, null);
+
+sidebarScroll.addEventListener('click', (e) => {
+  if (e.target.closest('.tree-row')) return;
+  selectRoot();
 });
 
 /* ================================================================== */
@@ -294,6 +293,16 @@ async function doTreeDrop(targetItem, source) {
 /* ================================================================== */
 /*  Tree interactions                                                  */
 /* ================================================================== */
+function selectRoot() {
+  $$('.tree-row.active').forEach(el => el.classList.remove('active'));
+  selected = { path: '', is_dir: true };
+  activeDir = '';
+  fileActions.style.display = 'none';
+  previewFrame.style.display = 'none';
+  dropZone.style.display = '';
+  breadcrumb.textContent = '/ (root)';
+}
+
 function toggleFolder(row, item) {
   const children = row.nextElementSibling;
   if (!children || !children.classList.contains('tree-children')) return;
