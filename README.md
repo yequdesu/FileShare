@@ -12,7 +12,7 @@
 - **内部拖拽** -- 拖动文件到文件夹或根目录进行移动
 - **内联创建与重命名** -- 新建时生成占位行并立即进入编辑；选中后按 F2 或右键重命名
 - **点击取消选中** -- 点击树之外的区域取消高亮
-- **文件预览** -- 图片、视频、音频、PDF、Markdown（渲染）、代码高亮
+- **文件预览** -- 图片、视频、音频、PDF、Markdown（渲染）、代码高亮、图表（Kroki）
 - **实时同步** -- WebSocket 广播文件变更和在线用户数
 - **存储用量** -- 可视化进度条和数值显示
 
@@ -47,6 +47,7 @@ docker compose up --build
 | `MAX_FILE_SIZE_MB` | `2048` | 单文件上传限制 (MB) |
 | `HOST` | `0.0.0.0` | 服务器绑定地址 |
 | `PORT` | `8080` | 服务器端口 |
+| `KROKI_URL` | `https://kroki.io` | Kroki 图表渲染服务地址 |
 
 ## API
 
@@ -62,7 +63,55 @@ docker compose up --build
 | `POST` | `/api/rename?path=&name=` | 原地重命名 |
 | `GET` | `/api/preview?path=` | 预览页面 |
 | `GET` | `/api/raw?path=` | 原始文件字节 |
+| `GET` | `/api/kroki?path=` | 通过 Kroki 渲染图表为 SVG |
 | `WS` | `/ws` | 实时事件推送 |
+
+## 图表预览 (Kroki)
+
+支持图表文件自动渲染预览。上传以下格式的文件即可在浏览器中看到渲染后的图表：
+
+| 扩展名 | 图表类型 |
+|--------|----------|
+| `.puml` `.pu` `.plantuml` | PlantUML |
+| `.mmd` `.mermaid` | Mermaid |
+| `.dot` `.gv` | Graphviz |
+| `.d2` | D2 |
+| `.erd` | Entity Relationship |
+| `.excalidraw` | Excalidraw |
+| `.blockdiag` | Block Diagram |
+| `.seqdiag` | Sequence Diagram |
+| `.actdiag` | Activity Diagram |
+| `.nwdiag` | Network Diagram |
+| `.c4plantuml` | C4 (PlantUML) |
+| `.svgbob` | Svgbob |
+| `.vega` `.vegalite` | Vega / Vega-Lite |
+| `.wavedrom` | WaveDrom |
+
+使用公共 Kroki 服务 (`https://kroki.io`) 或自托管。
+
+### 自托管 Kroki
+
+`docker-compose.yml` 已内置完整 Kroki 集群（含 Mermaid + BlockDiag 支持）。
+
+```bash
+# 一键启动全部服务
+docker compose up -d
+
+# 查看状态
+docker compose ps
+
+# 停止
+docker compose down
+```
+
+Kroki 端口可通过 `KROKI_PORT` 环境变量配置（默认 `8001`）。
+
+如需在本地开发时连接 Docker 中的 Kroki：
+
+```bash
+export KROKI_URL=http://localhost:8001
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
 ## 快捷键
 

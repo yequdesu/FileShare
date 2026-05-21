@@ -10,4 +10,27 @@ services:
       - MAX_TOTAL_SIZE_GB=10
       - MAX_FILE_SIZE_MB=2048
       - PORT=8080
+      - KROKI_URL=http://kroki:8000
+    restart: unless-stopped
+    depends_on:
+      - kroki
+
+  # Kroki diagram rendering gateway
+  kroki:
+    image: yuzutech/kroki
+    ports:
+      - "${KROKI_PORT:-8001}:8000"
+    environment:
+      - KROKI_MERMAID_HOST=kroki-mermaid
+      - KROKI_BLOCKDIAG_HOST=kroki-blockdiag
+    restart: unless-stopped
+
+  # Mermaid companion
+  kroki-mermaid:
+    image: yuzutech/kroki-mermaid
+    restart: unless-stopped
+
+  # BlockDiag / SeqDiag / ActDiag / NwDiag companion
+  kroki-blockdiag:
+    image: yuzutech/kroki-blockdiag
     restart: unless-stopped

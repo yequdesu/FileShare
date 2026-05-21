@@ -34,13 +34,18 @@ let dragSource = null;       // { path, is_dir, name } being dragged
 /*  ICONS  (VS Code codicons)                                          */
 /* ================================================================== */
 const FILE_ICONS = {
+  puml:     'file-code',    pu:       'file-code',    plantuml: 'file-code',
+  mmd:      'file-code',    mermaid:  'file-code',
+  dot:      'file-code',    gv:       'file-code',
+  d2:       'file-code',    erd:      'file-code',
   md:       'markdown',     py:       'file-code',
   js:       'file-code',    ts:       'file-code',
   jsx:      'react',        tsx:      'react',
   vue:      'file-code',    svelte:   'file-code',
-  html:     'html',         htm:      'html',
-  css:      'css',          scss:     'css',       less: 'css',
-  json:     'json',         xml:      'xml',
+  html:     'file-code',   htm:      'file-code',
+  css:      'file-code',   scss:     'file-code', less: 'file-code',
+  json:     'json',         xml:      'file-code',
+  yml:      'settings',     yaml:     'settings',  toml: 'settings',
   yml:      'settings',     yaml:     'settings',  toml: 'settings',
   cfg:      'settings',     ini:      'settings',  env:  'settings',
   lock:     'lock',
@@ -52,8 +57,8 @@ const FILE_ICONS = {
   pdf:      'file-pdf',
   txt:      'file-text',    log:      'file-text',
   sh:       'terminal',     bash:     'terminal',
-  dockerfile: 'docker',
-  gitignore:  'git-ignore',
+  dockerfile: 'file-code',
+  gitignore:  'file',
 };
 
 function iconClass(name, isDir) {

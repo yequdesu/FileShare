@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ filename }}</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+{% if category == "markdown" %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+{% endif %}
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#1e1e1e;color:#d4d4d4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
@@ -32,11 +35,56 @@ pre code{display:block;padding:16px;font-size:13px;line-height:1.6;font-family:'
 .markdown-body ul,.markdown-body ol{padding-left:24px;margin-bottom:12px}
 .markdown-body blockquote{border-left:3px solid #007acc;padding-left:16px;color:#888;margin-bottom:12px}
 .markdown-body img{max-width:100%}
+.katex{color:#d4d4d4}
+.katex-display{overflow-x:auto;padding:4px 0}
+.diagram-wrap{position:relative;display:flex;align-items:center;justify-content:center;min-height:100vh;width:100%}
+.diagram-wrap pre{width:100%}
+.diagram-toggle{position:fixed;top:16px;right:16px;background:#007acc;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px;z-index:10}
+.diagram-toggle:hover{background:#1a8ad4}
+.diagram-toggle.view-source{background:#5a5a5a}
+.diagram-toggle.view-source:hover{background:#6e6e6e}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:hsla(0,0%,47%,.4)}
+::-webkit-scrollbar-thumb:hover{background:hsla(0,0%,39%,.7)}
+::-webkit-scrollbar-track{background:transparent}
+*{scrollbar-width:thin;scrollbar-color:hsla(0,0%,47%,.4) transparent}
 </style>
 </head>
 <body>
 {% if category == "image" %}
 <img src="/api/raw?path={{ path }}" alt="{{ filename }}">
+{% elif category == "diagram" %}
+<div class="diagram-wrap">
+  <pre id="diagram-source"><code id="diagram-code"></code></pre>
+  <object id="diagram-render" data="" type="image/svg+xml"
+          style="display:none;max-width:100%;max-height:90vh;border-radius:4px;background:#fff;padding:16px">
+    <div style="text-align:center;padding:24px;color:#f48771">Failed to render diagram</div>
+  </object>
+</div>
+<button id="diagram-toggle" class="diagram-toggle" onclick="toggleDiagram()" style="display:none">Render Diagram</button>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+var diagramLoaded=false;
+fetch('/api/raw?path={{ path }}').then(function(r){return r.text()}).then(function(t){
+  var c=document.getElementById('diagram-code');
+  c.textContent=t;
+  hljs.highlightElement(c);
+  document.getElementById('diagram-toggle').style.display='';
+});
+function toggleDiagram(){
+  var src=document.getElementById('diagram-source');
+  var r=document.getElementById('diagram-render');
+  var b=document.getElementById('diagram-toggle');
+  if(r.style.display==='none'){
+    if(!diagramLoaded){r.data='/api/kroki?path={{ path }}';diagramLoaded=true}
+    r.style.display='';src.style.display='none';
+    b.innerHTML='View Source';b.classList.add('view-source');
+  }else{
+    r.style.display='none';src.style.display='';
+    b.innerHTML='Render Diagram';b.classList.remove('view-source');
+  }
+}
+</script>
 {% elif category == "video" %}
 <video controls><source src="/api/raw?path={{ path }}" type="{{ mime }}"></video>
 {% elif category == "audio" %}
@@ -46,7 +94,25 @@ pre code{display:block;padding:16px;font-size:13px;line-height:1.6;font-family:'
 {% elif category == "markdown" %}
 <div class="markdown-body" id="md-content"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
-<script>fetch('/api/raw?path={{ path }}').then(r=>r.text()).then(t=>{document.getElementById('md-content').innerHTML=marked.parse(t)})</script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>
+fetch('/api/raw?path={{ path }}').then(function(r){return r.text()}).then(function(t){
+  var el=document.getElementById('md-content');
+  // join lines within $$...$$ blocks to prevent marked from inserting <br>
+  t = t.replace(/\$\$[\s\S]*?\$\$/g, function(m){return m.replace(/\n/g,' ')});
+  el.innerHTML=marked.parse(t);
+  renderMathInElement(el,{
+    delimiters:[
+      {left:'$$',right:'$$',display:true},
+      {left:'$',right:'$',display:false},
+      {left:'\\[',right:'\\]',display:true},
+      {left:'\\(',right:'\\)',display:false}
+    ],
+    throwOnError:false
+  });
+});
+</script>
 {% elif category == "code" or category == "text" %}
 <pre><code id="hl-content"></code></pre>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
