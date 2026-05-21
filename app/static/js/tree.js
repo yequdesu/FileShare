@@ -1,11 +1,5 @@
 /* Tree rendering, selection, drag/drop, context menu, inline rename */
 /* ================================================================== */
-/*  DOM helpers                                                        */
-/* ================================================================== */
-const $  = (sel, ctx) => (ctx || document).querySelector(sel);
-const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
-
-/* ================================================================== */
 /*  ICONS  (VS Code codicons)                                          */
 /* ================================================================== */
 const FILE_ICONS = {
