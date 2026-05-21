@@ -1,0 +1,13 @@
+services:
+  fileshare:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - DATA_DIR=/data
+      - MAX_TOTAL_SIZE_GB=10
+      - MAX_FILE_SIZE_MB=2048
+      - PORT=8080
+    restart: unless-stopped

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ filename }}</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1e1e1e;color:#d4d4d4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+img,video,audio{max-width:100%;max-height:90vh;border-radius:4px}
+audio{min-width:320px}
+.info{text-align:center;max-width:480px}
+.info h2{font-size:18px;font-weight:500;margin-bottom:12px;word-break:break-all}
+.info p{color:#888;font-size:13px;margin-bottom:20px}
+.info a{display:inline-block;padding:8px 20px;background:#007acc;color:#fff;text-decoration:none;border-radius:4px;font-size:13px}
+.info a:hover{background:#1a8ad4}
+pre{border-radius:4px;overflow:auto;max-height:90vh;max-width:100%}
+pre code{display:block;padding:16px;font-size:13px;line-height:1.6;font-family:'Cascadia Code','Fira Code','JetBrains Mono',Consolas,monospace}
+.markdown-body{max-width:800px;width:100%;padding:20px;line-height:1.7;font-size:14px}
+.markdown-body h1,.markdown-body h2,.markdown-body h3{margin-top:24px;margin-bottom:12px;font-weight:500}
+.markdown-body h1{font-size:24px;border-bottom:1px solid #3c3c3c;padding-bottom:8px}
+.markdown-body h2{font-size:20px;border-bottom:1px solid #3c3c3c;padding-bottom:6px}
+.markdown-body p{margin-bottom:12px}
+.markdown-body code{background:#2d2d2d;padding:2px 6px;border-radius:3px;font-size:13px}
+.markdown-body pre{background:#252526;margin-bottom:16px}
+.markdown-body pre code{padding:16px;line-height:1.5}
+.markdown-body table{border-collapse:collapse;width:100%;margin-bottom:16px}
+.markdown-body th,.markdown-body td{border:1px solid #3c3c3c;padding:8px 12px;text-align:left}
+.markdown-body th{background:#252526}
+.markdown-body a{color:#007acc}
+.markdown-body ul,.markdown-body ol{padding-left:24px;margin-bottom:12px}
+.markdown-body blockquote{border-left:3px solid #007acc;padding-left:16px;color:#888;margin-bottom:12px}
+.markdown-body img{max-width:100%}
+</style>
+</head>
+<body>
+{% if category == "image" %}
+<img src="/api/raw?path={{ path }}" alt="{{ filename }}">
+{% elif category == "video" %}
+<video controls><source src="/api/raw?path={{ path }}" type="{{ mime }}"></video>
+{% elif category == "audio" %}
+<audio controls><source src="/api/raw?path={{ path }}" type="{{ mime }}"></audio>
+{% elif category == "pdf" %}
+<iframe src="/api/raw?path={{ path }}" style="width:100%;height:100vh;border:none"></iframe>
+{% elif category == "markdown" %}
+<div class="markdown-body" id="md-content"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<script>fetch('/api/raw?path={{ path }}').then(r=>r.text()).then(t=>{document.getElementById('md-content').innerHTML=marked.parse(t)})</script>
+{% elif category == "code" or category == "text" %}
+<pre><code id="hl-content"></code></pre>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>fetch('/api/raw?path={{ path }}').then(r=>r.text()).then(t=>{var c=document.getElementById('hl-content');c.textContent=t;hljs.highlightElement(c)})</script>
+{% else %}
+<div class="info">
+<h2>{{ filename }}</h2>
+<p>{{ (size / 1024)|round(1) }} KB &middot; {{ mime }}</p>
+<a href="/api/download?path={{ path }}">Download</a>
+</div>
+{% endif %}
+</body>
+</html>
