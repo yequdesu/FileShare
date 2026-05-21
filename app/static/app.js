@@ -301,6 +301,7 @@ function selectRoot() {
   previewFrame.style.display = 'none';
   dropZone.style.display = '';
   breadcrumb.textContent = '/ (root)';
+  sidebarScroll.classList.add('root-selected');
 }
 
 function toggleFolder(row, item) {
@@ -324,6 +325,7 @@ function toggleFolder(row, item) {
 
 function selectItem(path, isDir) {
   $$('.tree-row.active').forEach(el => el.classList.remove('active'));
+  sidebarScroll.classList.remove('root-selected');
   selected = { path, is_dir: isDir };
   activeDir = isDir ? path : '';
   const el = $(`.tree-row[data-path="${CSS.escape(path)}"]`);

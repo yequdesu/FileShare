@@ -70,6 +70,9 @@ input { font-size: inherit; font-family: inherit }
   padding-bottom: 12px;
   position: relative;
 }
+#sidebar-scroll.root-selected {
+  background: #37373d;
+}
 #tree-root {
   min-height: 100%;
 }
