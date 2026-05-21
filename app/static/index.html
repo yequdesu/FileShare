@@ -70,18 +70,24 @@
 
 <!-- context menu -->
 <div id="ctx-menu" style="display:none">
-  <div class="ctx-item" data-action="new-file"><span class="codicon codicon-new-file ctx-icon"></span>New File</div>
-  <div class="ctx-item" data-action="new-folder"><span class="codicon codicon-new-folder ctx-icon"></span>New Folder</div>
+  <!-- empty area items -->
+  <div class="ctx-item" data-action="new-file" data-for-empty><span class="codicon codicon-new-file ctx-icon"></span>New File</div>
+  <div class="ctx-item" data-action="new-folder" data-for-empty><span class="codicon codicon-new-folder ctx-icon"></span>New Folder</div>
+  <div class="ctx-item" data-action="refresh" data-for-empty><span class="codicon codicon-refresh ctx-icon"></span>Refresh</div>
+  <!-- item items -->
   <div class="ctx-sep"></div>
-  <div class="ctx-item" data-action="open"><span class="codicon codicon-file ctx-icon"></span>Open</div>
-  <div class="ctx-item" data-action="download" data-only-file><span class="codicon codicon-cloud-download ctx-icon"></span>Download</div>
-  <div class="ctx-item" data-action="upload-here" data-only-dir><span class="codicon codicon-cloud-upload ctx-icon"></span>Upload Here</div>
+  <div class="ctx-item" data-action="new-file" data-for-item><span class="codicon codicon-new-file ctx-icon"></span>New File</div>
+  <div class="ctx-item" data-action="new-folder" data-for-item><span class="codicon codicon-new-folder ctx-icon"></span>New Folder</div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item" data-action="rename"><span class="codicon codicon-edit ctx-icon"></span>Rename</div>
-  <div class="ctx-item" data-action="delete"><span class="codicon codicon-trash ctx-icon"></span>Delete<span class="ctx-shortcut">Del</span></div>
+  <div class="ctx-item" data-action="open" data-for-item><span class="codicon codicon-file ctx-icon"></span>Open</div>
+  <div class="ctx-item" data-action="download" data-for-item data-only-file><span class="codicon codicon-cloud-download ctx-icon"></span>Download</div>
+  <div class="ctx-item" data-action="upload-here" data-for-item data-only-dir><span class="codicon codicon-cloud-upload ctx-icon"></span>Upload Here</div>
   <div class="ctx-sep"></div>
-  <div class="ctx-item" data-action="copy-path"><span class="codicon codicon-copy ctx-icon"></span>Copy Path<span class="ctx-shortcut">Ctrl+Shift+C</span></div>
-  <div class="ctx-item" data-action="copy-rel-path"><span class="codicon codicon-link ctx-icon"></span>Copy Relative Path</div>
+  <div class="ctx-item" data-action="rename" data-for-item><span class="codicon codicon-edit ctx-icon"></span>Rename<span class="ctx-shortcut">F2</span></div>
+  <div class="ctx-item" data-action="delete" data-for-item><span class="codicon codicon-trash ctx-icon"></span>Delete<span class="ctx-shortcut">Del</span></div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" data-action="copy-path" data-for-item><span class="codicon codicon-copy ctx-icon"></span>Copy Path<span class="ctx-shortcut">Ctrl+Shift+C</span></div>
+  <div class="ctx-item" data-action="copy-rel-path" data-for-item><span class="codicon codicon-link ctx-icon"></span>Copy Relative Path</div>
 </div>
 
 <script src="/static/app.js"></script>

@@ -68,6 +68,10 @@ input { font-size: inherit; font-family: inherit }
 #sidebar-scroll {
   flex: 1; overflow-y: auto; overflow-x: hidden;
   padding-bottom: 12px;
+  position: relative;
+}
+#tree-root {
+  min-height: 100%;
 }
 
 /* --- tree --- */
@@ -106,10 +110,30 @@ input { font-size: inherit; font-family: inherit }
 
 .tree-name {
   flex: 1; overflow: hidden; text-overflow: ellipsis;
-  padding-left: 2px; line-height: 26px;
+  padding-left: 2px; line-height: 22px;
 }
 .tree-name.folder { color: #cccccc }
 .tree-name.file   { color: #cccccc }
+
+/* inline rename input */
+.tree-inline-input {
+  flex: 1;
+  height: 20px;
+  padding: 0 4px;
+  margin-left: 2px;
+  background: #3c3c3c;
+  border: 1px solid #007acc;
+  border-radius: 2px;
+  color: #e0e0e0;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  outline: none;
+  min-width: 60px;
+}
+.tree-row.editing {
+  background: #37373d;
+}
 
 .tree-actions {
   display: none; gap: 2px; padding-right: 4px; flex-shrink: 0;
@@ -122,6 +146,12 @@ input { font-size: inherit; font-family: inherit }
 .tree-actions button:hover { background: #4a4a4a; color: #ccc }
 
 /* --- main area --- */
+.drag-over-area {
+  background: rgba(0, 122, 204, 0.1);
+  outline: 2px dashed #007acc;
+  outline-offset: -2px;
+}
+
 #main {
   flex: 1; display: flex; flex-direction: column;
   min-width: 0;
