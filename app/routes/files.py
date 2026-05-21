@@ -1,4 +1,4 @@
-import os
+import shutil
 import aiofiles
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -68,10 +68,9 @@ async def delete_item(path: str = Query(...)):
         raise HTTPException(404, "not found")
 
     if abs_path.is_dir():
-        import shutil
         shutil.rmtree(abs_path)
     else:
-        os.remove(abs_path)
+        abs_path.unlink()
 
     await manager.broadcast({"type": "file_deleted", "path": path})
     return {"ok": True}
@@ -112,7 +111,6 @@ async def move_item(src: str = Query(...), dst: str = Query(...)):
         raise HTTPException(409, "destination already exists")
 
     dst_path.parent.mkdir(parents=True, exist_ok=True)
-    import shutil
     shutil.move(str(src_path), str(dst_path))
 
     dst_rel = str(dst_path.relative_to(DATA_DIR))

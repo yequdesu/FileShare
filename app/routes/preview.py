@@ -1,3 +1,4 @@
+from pathlib import Path
 import mimetypes
 from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import HTMLResponse, FileResponse
@@ -5,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 from app.services.storage import get_abs_path
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
 MIME_CATEGORIES = {
     "image": {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml", "image/bmp"},

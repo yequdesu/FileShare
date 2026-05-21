@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 from config import DATA_DIR
 
@@ -44,10 +43,10 @@ def get_tree(base: str = "") -> list:
 
 def get_total_size() -> int:
     total = 0
-    for dirpath, _, filenames in os.walk(DATA_DIR):
-        for f in filenames:
+    for f in Path(DATA_DIR).rglob("*"):
+        if f.is_file():
             try:
-                total += os.path.getsize(os.path.join(dirpath, f))
+                total += f.stat().st_size
             except OSError:
                 pass
     return total

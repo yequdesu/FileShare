@@ -133,20 +133,11 @@ input { font-size: inherit; font-family: inherit }
   line-height: 20px;
   outline: none;
   min-width: 60px;
+  width: 100%;
 }
 .tree-row.editing {
   background: #37373d;
 }
-
-.tree-actions {
-  display: none; gap: 2px; padding-right: 4px; flex-shrink: 0;
-}
-.tree-row:hover .tree-actions { display: flex }
-.tree-actions button {
-  width: 18px; height: 18px; border-radius: 3px;
-  font-size: 11px; color: #888; display: flex; align-items: center; justify-content: center;
-}
-.tree-actions button:hover { background: #4a4a4a; color: #ccc }
 
 /* --- main area --- */
 .drag-over-area {
@@ -236,32 +227,6 @@ input { font-size: inherit; font-family: inherit }
   background: #454545;
   margin: 4px 16px;
 }
-#modal-mask {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.5);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 100;
-}
-#modal-box {
-  background: #252526; border: 1px solid #3c3c3c;
-  border-radius: 6px; padding: 20px; min-width: 320px;
-}
-#modal-msg { margin-bottom: 12px; font-size: 13px }
-#modal-input {
-  width: 100%; padding: 6px 8px; margin-bottom: 16px;
-  background: #3c3c3c; border: 1px solid #555; border-radius: 3px;
-  color: #e0e0e0; outline: none;
-}
-#modal-input:focus { border-color: #007acc }
-#modal-actions { display: flex; justify-content: flex-end; gap: 8px }
-#modal-actions button {
-  padding: 5px 14px; border-radius: 3px; font-size: 12px;
-}
-#modal-ok { background: #007acc; color: #fff }
-#modal-ok:hover { background: #1a8ad4 }
-#modal-cancel { color: #ccc }
-#modal-cancel:hover { background: #3c3c3c }
-
 /* --- scrollbar --- */
 ::-webkit-scrollbar { width: 8px; height: 8px }
 ::-webkit-scrollbar-track { background: transparent }

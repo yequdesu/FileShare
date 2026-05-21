@@ -1,69 +1,64 @@
 /* ------------------------------------------------------------------ */
-/*  DOM refs & globals                                                */
+/*  DOM refs                                                          */
 /* ------------------------------------------------------------------ */
-const $ = (sel, ctx) => (ctx || document).querySelector(sel);
+const $  = (sel, ctx) => (ctx || document).querySelector(sel);
 const $$ = (sel, ctx) => Array.from((ctx || document).querySelectorAll(sel));
 
-const treeRoot     = $('#tree-root');
+const treeRoot      = $('#tree-root');
 const sidebarScroll = $('#sidebar-scroll');
-const dropZone     = $('#drop-zone');
-const fileInput    = $('#file-input');
-const previewFrame = $('#preview-frame');
-const fileActions  = $('#file-actions');
-const breadcrumb   = $('#selected-breadcrumb');
-const userCountEl  = $('#user-count');
-const storageBar   = $('#storage-bar-fill');
-const storageText  = $('#storage-text');
-const ctxMenu      = $('#ctx-menu');
-
-const modalMask   = $('#modal-mask');
-const modalMsg    = $('#modal-msg');
-const modalInput  = $('#modal-input');
-const modalOk     = $('#modal-ok');
-const modalCancel = $('#modal-cancel');
+const dropZone      = $('#drop-zone');
+const fileInput     = $('#file-input');
+const previewFrame  = $('#preview-frame');
+const fileActions   = $('#file-actions');
+const breadcrumb    = $('#selected-breadcrumb');
+const userCountEl   = $('#user-count');
+const storageBar    = $('#storage-bar-fill');
+const storageText   = $('#storage-text');
+const ctxMenu       = $('#ctx-menu');
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
 /* ------------------------------------------------------------------ */
-let treeData     = [];
-let selected     = null;          // { path, is_dir }
-let activeDir    = '';            // current upload target
-let ws           = null;
-let ctxTarget    = null;          // { path, is_dir, name } or null (empty area)
-let dragSource   = null;          // { path, is_dir, name }
-let expandingDirs = new Set();    // tracks which dirs are expanded
+let treeData   = [];
+let selected   = null;       // { path, is_dir }
+let activeDir  = '';         // current upload target directory
+let ws         = null;
+let ctxTarget  = null;       // context menu target, null = empty area
+let dragSource = null;       // { path, is_dir, name } being dragged
 
 /* ================================================================== */
 /*  ICONS  (VS Code codicons)                                          */
 /* ================================================================== */
 const FILE_ICONS = {
-  md:   'markdown',        py:   'file-code',
-  js:   'file-code',       ts:   'file-code',
-  jsx:  'react',           tsx:  'react',
-  vue:  'file-code',       svelte:'file-code',
-  html: 'html',            htm:  'html',
-  css:  'css',             scss: 'css',       less:'css',
-  json: 'json',            xml:  'xml',
-  yml:  'settings',        yaml: 'settings',  toml:'settings',
-  cfg:  'settings',        ini:  'settings',  env:'settings',
-  lock: 'lock',
-  svg:  'file-media',      png:  'file-media',jpg:'file-media',
-  jpeg: 'file-media',      gif:  'file-media',webp:'file-media',
-  ico:  'file-media',      bmp:  'file-media',
-  zip:  'file-zip',        tar:  'file-zip',  gz:'file-zip',
-  bz2:  'file-zip',        '7z': 'file-zip',  rar:'file-zip',
-  pdf:  'file-pdf',
-  txt:  'file-text',       log:  'file-text',
-  sh:   'terminal',        bash: 'terminal',
-  dockerfile:'docker',
-  gitignore:'git-ignore',
+  md:       'markdown',     py:       'file-code',
+  js:       'file-code',    ts:       'file-code',
+  jsx:      'react',        tsx:      'react',
+  vue:      'file-code',    svelte:   'file-code',
+  html:     'html',         htm:      'html',
+  css:      'css',          scss:     'css',       less: 'css',
+  json:     'json',         xml:      'xml',
+  yml:      'settings',     yaml:     'settings',  toml: 'settings',
+  cfg:      'settings',     ini:      'settings',  env:  'settings',
+  lock:     'lock',
+  svg:      'file-media',   png:      'file-media',jpg:  'file-media',
+  jpeg:     'file-media',   gif:      'file-media',webp: 'file-media',
+  ico:      'file-media',   bmp:      'file-media',
+  zip:      'file-zip',     tar:      'file-zip',  gz:   'file-zip',
+  bz2:      'file-zip',     '7z':     'file-zip',  rar:  'file-zip',
+  pdf:      'file-pdf',
+  txt:      'file-text',    log:      'file-text',
+  sh:       'terminal',     bash:     'terminal',
+  dockerfile: 'docker',
+  gitignore:  'git-ignore',
 };
-function getIconClass(n, isDir) {
+
+function iconClass(name, isDir) {
   if (isDir) return 'codicon codicon-folder folder-icon';
-  const ext = n.split('.').pop().toLowerCase();
+  const ext = name.split('.').pop().toLowerCase();
   return `codicon codicon-${FILE_ICONS[ext] || 'file'} file-icon`;
 }
-function folderIconCls(open) {
+
+function folderIcon(open) {
   return open ? 'codicon codicon-folder-opened folder-icon open'
               : 'codicon codicon-folder folder-icon';
 }
@@ -71,15 +66,17 @@ function folderIconCls(open) {
 /* ================================================================== */
 /*  API                                                                */
 /* ================================================================== */
-async function api(m, url, body) {
-  const o = { method: m };
+async function api(method, url, body) {
+  const opts = { method };
   if (body && !(body instanceof FormData)) {
-    o.headers = { 'Content-Type': 'application/json' };
-    o.body = JSON.stringify(body);
-  } else if (body instanceof FormData) o.body = body;
-  const r = await fetch(url, o);
-  if (!r.ok) throw new Error((await r.text()) || r.statusText);
-  return r.json().catch(() => ({}));
+    opts.headers = { 'Content-Type': 'application/json' };
+    opts.body = JSON.stringify(body);
+  } else if (body instanceof FormData) {
+    opts.body = body;
+  }
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error((await res.text()) || res.statusText);
+  return res.json().catch(() => ({}));
 }
 
 /* ================================================================== */
@@ -93,6 +90,7 @@ async function refreshTree() {
     if (el) el.classList.add('active');
   }
 }
+
 async function refreshStorage() {
   const s = await api('GET', '/api/storage');
   storageBar.style.width = s.percent + '%';
@@ -125,10 +123,9 @@ function makeTreeRow(item, depth) {
   row.dataset.isDir = item.is_dir ? '1' : '0';
   row.dataset.name = item.name;
   row.dataset.ghost = item._ghost || '';
-
   if (selected && selected.path === item.path) row.classList.add('active');
 
-  /* toggle */
+  /* toggle arrow */
   const toggle = document.createElement('span');
   toggle.className = 'tree-toggle codicon';
   toggle.classList.add(item.is_dir ? 'codicon-chevron-right' : 'empty');
@@ -136,7 +133,7 @@ function makeTreeRow(item, depth) {
 
   /* icon */
   const icon = document.createElement('span');
-  icon.className = 'tree-icon ' + getIconClass(item.name, item.is_dir);
+  icon.className = 'tree-icon ' + iconClass(item.name, item.is_dir);
   row.appendChild(icon);
 
   /* name */
@@ -146,13 +143,10 @@ function makeTreeRow(item, depth) {
   name.title = item.name;
   row.appendChild(name);
 
-  /* ghost badge */
-  if (item._ghost) {
-    row.style.opacity = '0.7';
-    row.style.fontStyle = 'italic';
-  }
+  /* ghost style */
+  if (item._ghost) { row.style.opacity = '0.7'; row.style.fontStyle = 'italic'; }
 
-  /* --- click → select / toggle --- */
+  /* click → select / toggle */
   row.addEventListener('click', (e) => {
     if (row.classList.contains('editing')) return;
     e.stopPropagation();
@@ -160,7 +154,7 @@ function makeTreeRow(item, depth) {
     selectItem(item.path, item.is_dir);
   });
 
-  /* dblclick → preview */
+  /* dblclick → preview file */
   if (!item.is_dir) {
     row.addEventListener('dblclick', (e) => {
       e.stopPropagation();
@@ -168,7 +162,7 @@ function makeTreeRow(item, depth) {
     });
   }
 
-  /* ===== DRAG SOURCE ===== */
+  /* drag source */
   row.draggable = true;
   row.addEventListener('dragstart', (e) => {
     if (item._ghost) { e.preventDefault(); return; }
@@ -183,30 +177,22 @@ function makeTreeRow(item, depth) {
     $$('.tree-row.drag-over').forEach(r => r.classList.remove('drag-over'));
   });
 
-  /* ===== DROP TARGET ===== */
+  /* drop target */
   row.addEventListener('dragover', (e) => {
     e.preventDefault(); e.stopPropagation();
     if (!dragSource) return;
     e.dataTransfer.dropEffect = 'move';
     row.classList.add('drag-over');
   });
-  row.addEventListener('dragleave', (e) => {
-    e.stopPropagation();
-    row.classList.remove('drag-over');
-  });
+  row.addEventListener('dragleave', (e) => { e.stopPropagation(); row.classList.remove('drag-over'); });
   row.addEventListener('drop', (e) => {
     e.preventDefault(); e.stopPropagation();
     row.classList.remove('drag-over');
-    if (dragSource && e.dataTransfer.files.length === 0) {
-      doTreeDrop(item, dragSource);
-      return;
-    }
-    if (e.dataTransfer.files.length) {
-      uploadFiles(e.dataTransfer.files, item.is_dir ? item.path : '');
-    }
+    if (dragSource && e.dataTransfer.files.length === 0) return doTreeDrop(item, dragSource);
+    if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files, item.is_dir ? item.path : '');
   });
 
-  /* ===== RIGHT-CLICK ===== */
+  /* right-click context menu */
   row.addEventListener('contextmenu', (e) => {
     e.preventDefault(); e.stopPropagation();
     if (item.is_dir) toggleFolder(row, item);
@@ -223,30 +209,25 @@ function makeTreeRow(item, depth) {
 /* ================================================================== */
 sidebarScroll.addEventListener('dragover', (e) => {
   if (!dragSource) return;
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
   sidebarScroll.classList.add('drag-over-area');
 });
-sidebarScroll.addEventListener('dragleave', () => {
-  sidebarScroll.classList.remove('drag-over-area');
-});
+sidebarScroll.addEventListener('dragleave', () => sidebarScroll.classList.remove('drag-over-area'));
 sidebarScroll.addEventListener('drop', (e) => {
   sidebarScroll.classList.remove('drag-over-area');
   if (!dragSource) return;
   e.preventDefault();
-  const src = dragSource;
-  doTreeDrop({ is_dir: true, path: '', name: '' }, src);
+  doTreeDrop({ is_dir: true, path: '' }, dragSource);
 });
 
-/* --- empty-area right-click context menu + select root on click --- */
+/* --- empty-area right-click → context menu, click → select root --- */
 sidebarScroll.addEventListener('contextmenu', (e) => {
-  if (e.target.closest('.tree-row')) return; // row handler handles it
+  if (e.target.closest('.tree-row')) return;
   e.preventDefault();
   selectRoot();
   ctxTarget = null;
   showContextMenu(e.clientX, e.clientY, null);
 });
-
 sidebarScroll.addEventListener('click', (e) => {
   if (e.target.closest('.tree-row')) return;
   selectRoot();
@@ -255,36 +236,57 @@ sidebarScroll.addEventListener('click', (e) => {
 /* ================================================================== */
 /*  Tree drop logic                                                    */
 /* ================================================================== */
-async function doTreeDrop(targetItem, source) {
-  if (!source || source.path === targetItem.path) return;
-  if (targetItem.is_dir && targetItem.path && targetItem.path.startsWith(source.path + '/')) return;
+async function doTreeDrop(target, source) {
+  if (!source || source.path === target.path) return;
+  if (target.is_dir && target.path && target.path.startsWith(source.path + '/')) return;
 
-  const destDir = targetItem.is_dir ? (targetItem.path || '') : targetItem.path.split('/').slice(0, -1).join('/');
+  const destDir = target.is_dir ? (target.path || '') : target.path.split('/').slice(0, -1).join('/');
   const newPath = (destDir ? destDir + '/' : '') + source.name;
   if (newPath === source.path) return;
 
   try {
     await api('POST', '/api/move?src=' + encodeURIComponent(source.path) + '&dst=' + encodeURIComponent(newPath));
     await refreshTree();
-  } catch (err) {
-    alert('Move failed: ' + err.message);
+  } catch (err) { alert('Move failed: ' + err.message); }
+}
+
+/* ================================================================== */
+/*  Selection helpers                                                  */
+/* ================================================================== */
+function clearSelection() {
+  $$('.tree-row.active').forEach(el => el.classList.remove('active'));
+  sidebarScroll.classList.remove('root-selected');
+  fileActions.style.display = 'none';
+  previewFrame.style.display = 'none';
+  dropZone.style.display = '';
+}
+
+function selectRoot() {
+  clearSelection();
+  selected = { path: '', is_dir: true };
+  activeDir = '';
+  sidebarScroll.classList.add('root-selected');
+  breadcrumb.textContent = '/ (root)';
+}
+
+function selectItem(path, isDir) {
+  clearSelection();
+  selected = { path, is_dir: isDir };
+  activeDir = isDir ? path : '';
+  const el = $(`.tree-row[data-path="${CSS.escape(path)}"]`);
+  if (el) el.classList.add('active');
+  if (isDir) {
+    breadcrumb.textContent = path || '/ (root)';
+  } else {
+    fileActions.style.display = '';
+    breadcrumb.textContent = path;
+    showPreview(path);
   }
 }
 
 /* ================================================================== */
 /*  Tree interactions                                                  */
 /* ================================================================== */
-function selectRoot() {
-  $$('.tree-row.active').forEach(el => el.classList.remove('active'));
-  selected = { path: '', is_dir: true };
-  activeDir = '';
-  fileActions.style.display = 'none';
-  previewFrame.style.display = 'none';
-  dropZone.style.display = '';
-  breadcrumb.textContent = '/ (root)';
-  sidebarScroll.classList.add('root-selected');
-}
-
 function toggleFolder(row, item) {
   const children = row.nextElementSibling;
   if (!children || !children.classList.contains('tree-children')) return;
@@ -294,35 +296,17 @@ function toggleFolder(row, item) {
   if (children.style.display === 'none') {
     children.style.display = '';
     toggle.classList.replace('codicon-chevron-right', 'codicon-chevron-down');
-    icon.className = 'tree-icon ' + folderIconCls(true);
-    expandingDirs.add(item.path);
+    icon.className = 'tree-icon ' + folderIcon(true);
   } else {
     children.style.display = 'none';
     toggle.classList.replace('codicon-chevron-down', 'codicon-chevron-right');
-    icon.className = 'tree-icon ' + folderIconCls(false);
-    expandingDirs.delete(item.path);
+    icon.className = 'tree-icon ' + folderIcon(false);
   }
 }
 
-function selectItem(path, isDir) {
-  $$('.tree-row.active').forEach(el => el.classList.remove('active'));
-  sidebarScroll.classList.remove('root-selected');
-  selected = { path, is_dir: isDir };
-  activeDir = isDir ? path : '';
-  const el = $(`.tree-row[data-path="${CSS.escape(path)}"]`);
-  if (el) el.classList.add('active');
-  if (isDir) {
-    fileActions.style.display = 'none';
-    previewFrame.style.display = 'none';
-    dropZone.style.display = '';
-    breadcrumb.textContent = path || '/ (root)';
-  } else {
-    fileActions.style.display = '';
-    breadcrumb.textContent = path;
-    showPreview(path);
-  }
-}
-
+/* ================================================================== */
+/*  Preview                                                            */
+/* ================================================================== */
 function showPreview(path) {
   dropZone.style.display = 'none';
   previewFrame.style.display = '';
@@ -345,14 +329,9 @@ async function uploadFiles(files, dir) {
 
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  uploadFiles(e.dataTransfer.files);
-});
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); uploadFiles(e.dataTransfer.files); });
 dropZone.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', () => {
-  if (fileInput.files.length) { uploadFiles(fileInput.files); fileInput.value = ''; }
-});
+fileInput.addEventListener('change', () => { if (fileInput.files.length) { uploadFiles(fileInput.files); fileInput.value = ''; } });
 
 /* ================================================================== */
 /*  Delete / Download                                                  */
@@ -361,13 +340,7 @@ async function deleteItem(path) {
   if (!confirm('Delete ' + path + ' ?')) return;
   try {
     await api('DELETE', '/api/delete?path=' + encodeURIComponent(path));
-    if (selected && selected.path === path) {
-      selected = null;
-      fileActions.style.display = 'none';
-      previewFrame.style.display = 'none';
-      dropZone.style.display = '';
-      breadcrumb.textContent = '';
-    }
+    if (selected && selected.path === path) selectRoot();
     await refreshTree();
     await refreshStorage();
   } catch (err) { alert('Delete failed: ' + err.message); }
@@ -379,14 +352,16 @@ function downloadItem(path) {
   a.download = ''; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-async function createFolderOnBackend(parent, name) {
+/* ================================================================== */
+/*  Backend creation helpers                                           */
+/* ================================================================== */
+async function createDir(parent, name) {
   const fp = parent ? parent + '/' + name : name;
   await api('POST', '/api/mkdir?path=' + encodeURIComponent(fp));
   await refreshTree();
 }
-async function createFileOnBackend(parent, name) {
-  const fp = parent ? parent + '/' + name : name;
-  // upload empty file
+
+async function createEmptyFile(parent, name) {
   await api('POST', '/api/upload?dir=' + encodeURIComponent(parent || ''),
     new File([new Blob([''], { type: 'text/plain' })], name));
   await refreshTree();
@@ -396,40 +371,24 @@ async function createFileOnBackend(parent, name) {
 /* ================================================================== */
 /*  INLINE RENAME  (VS Code style)                                     */
 /* ================================================================== */
-/**
- * Start inline rename on a tree row.
- * opts: { isNew, isDir, parentPath? }
- *   isNew=true  → ghost row; on confirm → create; on cancel → remove row
- *   isNew=false → real row; on confirm → rename; on cancel → restore name
- */
 function startInlineRename(row, opts) {
   opts = opts || {};
-  const isNew = opts.isNew || false;
-  const isDir = opts.isDir || false;
+  const isNew      = opts.isNew || false;
+  const isDir      = opts.isDir || false;
   const parentPath = opts.parentPath || '';
-  const oldName = row.dataset.name;
+  const oldName    = row.dataset.name;
 
   const nameSpan = row.querySelector('.tree-name');
   const input = document.createElement('input');
   input.className = 'tree-inline-input';
   input.value = oldName;
 
-  // Size the input to match the text width roughly
-  const style = getComputedStyle(nameSpan);
-  input.style.font = style.font;
-  input.style.fontSize = style.fontSize;
-  input.style.color = style.color;
-  input.style.width = '100%';
-  input.style.minWidth = '60px';
-
   nameSpan.replaceWith(input);
   row.classList.add('editing');
 
-  // Select name without extension for files (unless it's a new item)
   if (!isDir && oldName) {
     const dot = oldName.lastIndexOf('.');
-    if (dot > 0) input.setSelectionRange(0, dot);
-    else input.select();
+    if (dot > 0) input.setSelectionRange(0, dot); else input.select();
   } else {
     input.select();
   }
@@ -440,30 +399,21 @@ function startInlineRename(row, opts) {
   const commit = async () => {
     if (committed) return;
     committed = true;
-
     const newName = input.value.trim();
-    // Restore span
     input.replaceWith(nameSpan);
     row.classList.remove('editing');
     nameSpan.textContent = newName || oldName;
 
     if (isNew) {
-      // Ghost row — create or remove
-      if (!newName) {
-        row.remove();
-        row.nextElementSibling?.classList.contains('tree-children') && row.nextElementSibling.remove();
-        return;
-      }
+      if (!newName) { row.remove(); return; }
       try {
-        if (isDir) await createFolderOnBackend(parentPath, newName);
-        else await createFileOnBackend(parentPath, newName);
+        if (isDir) await createDir(parentPath, newName);
+        else       await createEmptyFile(parentPath, newName);
       } catch (err) { alert('Create failed: ' + err.message); }
-      // row will be replaced by refreshTree
       await refreshTree();
       return;
     }
 
-    // Real row — rename
     if (!newName || newName === oldName) return;
     try {
       await api('POST', '/api/rename?path=' + encodeURIComponent(oldName) +
@@ -483,74 +433,55 @@ function startInlineRename(row, opts) {
     input.replaceWith(nameSpan);
     row.classList.remove('editing');
     nameSpan.textContent = oldName;
-
-    if (isNew) {
-      row.remove();
-      row.nextElementSibling?.classList.contains('tree-children') && row.nextElementSibling.remove();
-    }
+    if (isNew) row.remove();
   };
 
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
     if (e.key === 'Escape') { e.preventDefault(); cancel(); }
   });
-
-  input.addEventListener('blur', () => {
-    // Small delay so context-menu clicks don't trigger blur commit
-    setTimeout(() => { if (!committed) commit(); }, 120);
-  });
+  input.addEventListener('blur', () => { setTimeout(() => { if (!committed) commit(); }, 120); });
 }
 
 /* ================================================================== */
-/*  INLINE CREATE  — insert ghost row into the tree                    */
+/*  INLINE CREATE  — insert ghost row into tree                        */
 /* ================================================================== */
 function insertGhostRow(parentPath, isDir) {
   const placeholder = isDir ? 'New Folder' : 'New File';
-  const path = (parentPath ? parentPath + '/' : '') + placeholder;
 
   const ghostItem = {
     name: placeholder,
-    path: path,
+    path: (parentPath ? parentPath + '/' : '') + placeholder,
     is_dir: isDir,
     children: [],
     _ghost: true,
   };
 
-  const row = makeTreeRow(ghostItem, 0); // depth doesn't matter, will be replaced on refresh
-  row.dataset.path = path;
+  const row = makeTreeRow(ghostItem, 0);
+  row.dataset.path = ghostItem.path;
   row.dataset.name = placeholder;
   row.dataset.ghost = '1';
 
-  // Insert at top of tree root (or find the parent container)
   let container = treeRoot;
-
-  // If parentPath is not empty, find the parent's children container
   if (parentPath) {
     const parentRow = $(`.tree-row[data-path="${CSS.escape(parentPath)}"]`);
     if (parentRow) {
-      // ensure parent is expanded
       const children = parentRow.nextElementSibling;
       if (children && children.classList.contains('tree-children')) {
         if (children.style.display === 'none') {
           children.style.display = '';
           const toggle = parentRow.querySelector('.tree-toggle');
-          const icon = parentRow.querySelector('.tree-icon');
+          const icon   = parentRow.querySelector('.tree-icon');
           if (toggle) toggle.classList.replace('codicon-chevron-right', 'codicon-chevron-down');
-          if (icon) icon.className = 'tree-icon ' + folderIconCls(true);
-          expandingDirs.add(parentPath);
+          if (icon)   icon.className = 'tree-icon ' + folderIcon(true);
         }
         container = children;
       }
     }
   }
 
-  // Insert at beginning
   container.insertBefore(row, container.firstChild);
-
-  // Scroll into view
   row.scrollIntoView({ block: 'nearest' });
-
-  // Start rename immediately
   startInlineRename(row, { isNew: true, isDir, parentPath });
 }
 
@@ -558,7 +489,6 @@ function insertGhostRow(parentPath, isDir) {
 /*  Context menu                                                       */
 /* ================================================================== */
 function showContextMenu(x, y, target) {
-  // target = null means empty area
   $$('.ctx-item', ctxMenu).forEach(el => {
     const onlyFile = el.dataset.onlyFile !== undefined;
     const onlyDir  = el.dataset.onlyDir !== undefined;
@@ -568,22 +498,16 @@ function showContextMenu(x, y, target) {
     el.style.display = '';
 
     if (target === null) {
-      // Empty area: only show items with forEmpty
       if (!forEmpty) el.style.display = 'none';
       return;
     }
-    // Item menu: hide empty-area items
     if (forEmpty && !forItem) { el.style.display = 'none'; return; }
     if (onlyFile && target.is_dir) { el.style.display = 'none'; return; }
-    if (onlyDir  && !target.is_dir) { el.style.display = 'none'; return; }
+    if (onlyDir  && !target.is_dir)  { el.style.display = 'none'; return; }
   });
 
-  // Hide/show separators
-  $$('.ctx-sep', ctxMenu).forEach(sep => {
-    sep.style.display = (target === null) ? 'none' : '';
-  });
+  $$('.ctx-sep', ctxMenu).forEach(sep => { sep.style.display = (target === null) ? 'none' : ''; });
 
-  // Position
   ctxMenu.style.display = '';
   const mw = ctxMenu.offsetWidth  || 180;
   const mh = ctxMenu.offsetHeight || 260;
@@ -598,15 +522,13 @@ ctxMenu.addEventListener('click', async (e) => {
   if (!el) return;
   const action = el.dataset.action;
   const target = ctxTarget;
-
   hideContextMenu();
 
-  // Empty-area actions
   if (target === null) {
     switch (action) {
-      case 'new-file': insertGhostRow(activeDir, false); break;
-      case 'new-folder': insertGhostRow(activeDir, true); break;
-      case 'refresh': await refreshTree(); await refreshStorage(); break;
+      case 'new-file':   insertGhostRow(activeDir, false); break;
+      case 'new-folder': insertGhostRow(activeDir, true);  break;
+      case 'refresh':    await refreshTree(); await refreshStorage(); break;
     }
     return;
   }
@@ -615,101 +537,44 @@ ctxMenu.addEventListener('click', async (e) => {
   const row = $(`.tree-row[data-path="${CSS.escape(target.path)}"]`);
 
   switch (action) {
-    case 'new-file':
-      insertGhostRow(parent, false);
-      break;
-    case 'new-folder':
-      insertGhostRow(parent, true);
-      break;
-    case 'open':
-      if (!target.is_dir) showPreview(target.path);
-      break;
-    case 'download':
-      if (!target.is_dir) downloadItem(target.path);
-      break;
-    case 'upload-here':
-      if (target.is_dir) {
-        activeDir = target.path;
-        selectItem(target.path, true);
-        fileInput.click();
-      }
-      break;
-    case 'rename':
-      if (row && !target._ghost) startInlineRename(row, { isNew: false, isDir: target.is_dir });
-      break;
-    case 'delete':
-      deleteItem(target.path);
-      break;
-    case 'copy-path':
-      navigator.clipboard.writeText(target.path).catch(() => {});
-      break;
-    case 'copy-rel-path':
-      navigator.clipboard.writeText(target.name).catch(() => {});
-      break;
+    case 'new-file':    insertGhostRow(parent, false);              break;
+    case 'new-folder':  insertGhostRow(parent, true);               break;
+    case 'open':        if (!target.is_dir) showPreview(target.path); break;
+    case 'download':    if (!target.is_dir) downloadItem(target.path); break;
+    case 'upload-here': if (target.is_dir) { activeDir = target.path; selectItem(target.path, true); fileInput.click(); } break;
+    case 'rename':      if (row && !target._ghost) startInlineRename(row, { isNew: false, isDir: target.is_dir }); break;
+    case 'delete':      deleteItem(target.path);                    break;
+    case 'copy-path':     navigator.clipboard.writeText(target.path).catch(() => {}); break;
+    case 'copy-rel-path': navigator.clipboard.writeText(target.name).catch(() => {}); break;
   }
 });
 
-/* --- close context menu on any outside mousedown / click --- */
-document.addEventListener('mousedown', (e) => {
-  if (!ctxMenu.contains(e.target)) hideContextMenu();
-});
-document.addEventListener('contextmenu', (e) => {
-  if (!ctxMenu.contains(e.target)) hideContextMenu();
-});
-
-/* ================================================================== */
-/*  Modal (kept for simple alerts)                                     */
-/* ================================================================== */
-function showModal(msg, withInput, onOk) {
-  modalMsg.textContent = msg;
-  modalInput.style.display = withInput ? '' : 'none';
-  modalInput.value = '';
-  modalMask.style.display = '';
-  const handler = () => {
-    modalMask.style.display = 'none';
-    modalOk.removeEventListener('click', handler);
-    modalCancel.removeEventListener('click', cancelHandler);
-    if (onOk) onOk(modalInput.value);
-  };
-  const cancelHandler = () => {
-    modalMask.style.display = 'none';
-    modalOk.removeEventListener('click', handler);
-    modalCancel.removeEventListener('click', cancelHandler);
-  };
-  modalOk.addEventListener('click', handler);
-  modalCancel.addEventListener('click', cancelHandler);
-  if (withInput) modalInput.focus();
-}
+document.addEventListener('mousedown',   (e) => { if (!ctxMenu.contains(e.target)) hideContextMenu(); });
+document.addEventListener('contextmenu', (e) => { if (!ctxMenu.contains(e.target)) hideContextMenu(); });
 
 /* ================================================================== */
 /*  Toolbar buttons                                                    */
 /* ================================================================== */
-$('#btn-new-file')?.addEventListener('click', () => insertGhostRow(activeDir, false));
-$('#btn-new-folder')?.addEventListener('click', () => insertGhostRow(activeDir, true));
-$('#btn-refresh')?.addEventListener('click', async () => { await refreshTree(); await refreshStorage(); });
-$('#btn-download')?.addEventListener('click', () => {
-  if (selected && !selected.is_dir) downloadItem(selected.path);
-});
-$('#btn-delete')?.addEventListener('click', () => {
-  if (selected) deleteItem(selected.path);
-});
+$('#btn-new-file').addEventListener('click',   () => insertGhostRow(activeDir, false));
+$('#btn-new-folder').addEventListener('click', () => insertGhostRow(activeDir, true));
+$('#btn-refresh').addEventListener('click',    async () => { await refreshTree(); await refreshStorage(); });
+$('#btn-download').addEventListener('click',   () => { if (selected && !selected.is_dir) downloadItem(selected.path); });
+$('#btn-delete').addEventListener('click',     () => { if (selected) deleteItem(selected.path); });
 
 /* ================================================================== */
 /*  Keyboard shortcuts                                                 */
 /* ================================================================== */
 document.addEventListener('keydown', (e) => {
-  // Del → delete selected
-  if (e.key === 'Delete' && selected && document.activeElement === document.body) {
-    e.preventDefault(); deleteItem(selected.path);
-  }
-  // F2 → inline rename selected
-  if (e.key === 'F2' && selected && document.activeElement === document.body) {
+  if (!selected || document.activeElement !== document.body) return;
+
+  if (e.key === 'Delete') { e.preventDefault(); deleteItem(selected.path); return; }
+  if (e.key === 'F2') {
     e.preventDefault();
     const row = $(`.tree-row[data-path="${CSS.escape(selected.path)}"]`);
     if (row && !row.dataset.ghost) startInlineRename(row, { isNew: false, isDir: selected.is_dir });
+    return;
   }
-  // Ctrl+Shift+C → copy path
-  if (e.ctrlKey && e.shiftKey && e.key === 'C' && selected && document.activeElement === document.body) {
+  if (e.ctrlKey && e.shiftKey && e.key === 'C') {
     e.preventDefault();
     navigator.clipboard.writeText(selected.path).catch(() => {});
   }
@@ -721,6 +586,7 @@ document.addEventListener('keydown', (e) => {
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
   ws = new WebSocket(proto + '://' + location.host + '/ws');
+
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
     switch (msg.type) {
